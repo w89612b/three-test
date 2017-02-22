@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <script src="node_modules/three/build/three.js"></script>
+  <script src="node_modules/dat.gui/build/dat.gui.js"></script>
+  <script src="node_modules/stats.js/build/stats.min.js"></script>
+  <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+  <div id="Stats-output"></div>
+  <!-- Div which will hold the Output -->
+  <div id="WebGL-output"></div>
+  <script>
+    var scene, camera, renderer, gui = new dat.GUI(), stats = initStats(), width = window.innerWidth, height = window.innerHeight;
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera( 45, width / height, .1, 1000 );
+   	scene.add(camera);
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(new THREE.Color(0xEEEEEE));
+    renderer.shadowMap.enabled = true;
+
+    var planeGeometry = new THREE.PlaneGeometry(60,40,1,1);
+    var planeMaterial = new THREE.MeshLambertMaterial({color:0xffffff});
+    var plane = new THREE.Mesh(planeGeometry,planeMaterial);
+    plane.receiveShadow = true;
+
+    plane.rotation.x = -.5*Math.PI;
+    plane.position.set(0,0,0);
+
+    scene.add(plane);
+
+    camera.position.set(-30,40,30);
+    camera.lookAt(scene.position);
+    // 环境光
+    var ambientLight = new THREE.AmbientLight(0x0c0c0c);
+    scene.add(ambientLight);
+
+    var spotLight = new THREE.SpotLight(0xffffff);
+    spotLight.position.set(-40,40,-10);
+    spotLight.castShadow = true;
+    scene.add(spotLight);
+
+    document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+    var step = 0;
+
+    var controls = new function(){
+    	this.rotationSpeed = .02;
+    	this.numberOfObjects = scene.children.length;
+    	this.removeCube = function (){
+    		var allChildren = scene.children;
+    		var lastObject = allChildren[allChildren.length - 1];
+    		if(lastObject instanceof THREE.Mesh){
+          // 删除场景最后添加的元素
+    			scene.remove(lastObject);
+    			this.numberOfObjects = scene.children.length;
+    		}
+    	};
+
+    	this.addCube = function(){
+    		var cubeSzie = Math.ceil((Math.random()*3));
+        var cubeGeometry = new THREE.BoxGeometry(cubeSzie,cubeSzie,cubeSzie);
+        var cubeMaterial = new THREE.MeshLambertMaterial({color: Math.random()* 0xffffff});
+        var cube = new THREE.Mesh(cubeGeometry,cubeMaterial);
+        cube.castShadow = true;
+        // 给场景元素命名  获取方式 Scene.getChildByName(name)
+        cube.name = "cube-" + scene.children.length;
+
+        cube.position.set( -30 + Math.round((Math.random()*planeGeometry.parameters.width)), Math.round((Math.random()*5)), -20 + Math.round((Math.random()*planeGeometry.parameters.height)) );
+
+        scene.add(cube);
+        this.numberOfObjects = scene.children.length;
+    	};
+
+      this.outputObjects = function(){
+        console.log(scene.children);
+      }
+    }
+
+    gui.add(controls,'rotationSpeed',0,.5).name('旋转');
+    gui.add(controls, 'addCube').name('添加');
+    gui.add(controls, 'removeCube').name('移除');
+    gui.add(controls, 'outputObjects').name('输出');
+    gui.add(controls, 'numberOfObjects').listen();
+
+    render();
+    function render(){
+      stats.update();
+      // traverse()函数遍历场景所有子元素
+      scene.traverse(function(e){
+        if(e instanceof THREE.Mesh && e != plane){
+          e.rotation.x += controls.rotationSpeed;
+          e.rotation.y += controls.rotationSpeed;
+          e.rotation.z += controls.rotationSpeed;
+        }
+      });
+      requestAnimationFrame(render);
+      renderer.render(scene,camera);
+    }
+
+    function initStats(){
+      var stats = new Stats();
+      stats.setMode(0);
+      stats.domElement.style.position = 'absolute';
+      stats.domElement.style.left = '0px';
+      stats.domElement.style.top = '0px';
+      document.getElementById("Stats-output").appendChild(stats.domElement);
+
+      return stats;
+    }
+  </script>
+</body>
+</html>
